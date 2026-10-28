@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Prod Prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: four views under one tab bar. Capture = shop in browser chrome + Prod panel. Coding tool, Tickets, Pull requests = the three ways a prod gets fixed. Everything stacks on phones. */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --sunk:#eef1f6; --ink:#14171f; --muted:#5b6170; --line:#dfe3ea;
+  --accent:#3b5bfd; --accent-ink:#ffffff; --accent-soft:#e7ecff;
+  --pin:#ff5a36; --ok:#13a36b; --ok-soft:#e1f5ec; --warn:#a8670f; --warn-soft:#fdf1dc;
+  --term:#10131a; --term-fg:#d7dbe4;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d0f14; --surface:#151821; --sunk:#10131a; --ink:#eef0f5; --muted:#9aa1b2; --line:#272b37;
+  --accent:#7b93ff; --accent-ink:#0d0f14; --accent-soft:#1c2340;
+  --pin:#ff7a5c; --ok:#3ccf8e; --ok-soft:#0f2a1f; --warn:#f0b45a; --warn-soft:#2a2110; --term:#07080c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d0f14; --surface:#151821; --sunk:#10131a; --ink:#eef0f5; --muted:#9aa1b2; --line:#272b37;
+  --accent:#7b93ff; --accent-ink:#0d0f14; --accent-soft:#1c2340;
+  --pin:#ff7a5c; --ok:#3ccf8e; --ok-soft:#0f2a1f; --warn:#f0b45a; --warn-soft:#2a2110; --term:#07080c; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body)}
+button,input,textarea{font:inherit;color:inherit}
+.shell{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px;display:flex;flex-direction:column;gap:16px}
+code,.mono{font-family:var(--mono);font-size:.82em}
+.muted{color:var(--muted)}
+h3.sub{margin:0;font:600 1rem var(--display)}
+
+/* top bar + tabs */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{font:800 1.45rem/1 var(--display);display:flex;align-items:center;gap:.45rem}
+.logo i{width:12px;height:12px;border-radius:50% 50% 50% 0;background:var(--pin);transform:rotate(-45deg);display:block}
+.tag{font:600 .68rem/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;padding:.4rem .55rem;border-radius:6px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.top-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.agent-chip{display:inline-flex;align-items:center;gap:.45rem;font:500 .78rem var(--mono);padding:.4rem .7rem;border-radius:99px;border:1px solid var(--line);background:var(--surface)}
+.agent-chip b{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.agent-chip.live b{background:var(--ok)}
+.intro{display:flex;flex-direction:column;gap:4px}
+.intro h1{margin:0;font:800 clamp(1.5rem,3vw,2.1rem)/1.1 var(--display);letter-spacing:-.01em;text-wrap:balance}
+.intro p{margin:0;color:var(--muted);max-width:68ch}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tab{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem .9rem;text-decoration:none;color:var(--muted);font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-current="page"]{color:var(--ink);border-color:var(--accent)}
+.cnt{font:600 .68rem/1 var(--mono);padding:.25rem .4rem;border-radius:99px;background:var(--sunk);color:var(--muted)}
+.cnt:empty{display:none}
+.vhead{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font:600 .72rem/1 var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--accent)}
+.vhead h2{margin:0;font:800 clamp(1.3rem,2.6vw,1.75rem)/1.15 var(--display);text-wrap:balance}
+.vhead p{margin:0;color:var(--muted);max-width:68ch}
+.view{display:flex;flex-direction:column;gap:16px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;padding:.6rem 1rem;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.sm{padding:.4rem .7rem;font-size:.85rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;padding:3px;background:var(--sunk);gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;padding:.4rem .8rem;border-radius:7px;cursor:pointer;font-weight:600;font-size:.88rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+.app{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:18px;align-items:start}
+@media (max-width:960px){.app,.cols{grid-template-columns:1fr}}
+
+/* browser */
+.browser{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.chrome{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font:.76rem var(--mono);color:var(--muted)}
+.chrome .d{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.url{margin-left:6px;padding:.25rem .7rem;border-radius:6px;background:var(--sunk);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ext{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--sunk);flex-wrap:wrap}
+.ext .logo{font-size:1rem}
+.pinbtn{background:var(--pin);border-color:var(--pin);color:#fff}
+.pinbtn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.ext-hint{font-size:.85rem;color:var(--muted);flex:1;min-width:160px}
+.ext-count{font:600 .75rem var(--mono);color:var(--muted)}
+.site-wrap{position:relative}
+.site-wrap.pinning .site{cursor:crosshair}
+.pins{position:absolute;inset:0;pointer-events:none}
+.pin{position:absolute;width:28px;height:28px;margin:-28px 0 0 -2px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--pin);border:2px solid #fff;display:grid;place-items:center;pointer-events:auto;cursor:pointer;padding:0;box-shadow:0 4px 10px rgba(0,0,0,.25)}
+.pin span{transform:rotate(45deg);color:#fff;font:700 .72rem var(--mono)}
+.pin.fixed{background:var(--ok)}
+.pin.draft{background:var(--accent)}
+.pin.active{box-shadow:0 0 0 5px color-mix(in srgb,var(--pin) 35%,transparent),0 4px 10px rgba(0,0,0,.25)}
+.site-wrap.pinning .pin{pointer-events:none;opacity:.55}
+
+/* the demo shop: a third-party page, deliberately light in both themes */
+.site{background:#ffffff;color:#23211f;font:14px/1.5 "IBM Plex Sans",system-ui,sans-serif;padding:0 0 28px}
+.s-head{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #ecebe8;gap:12px;flex-wrap:wrap}
+.s-logo{font:600 1.05rem/1 Georgia,serif;letter-spacing:.02em;color:#23211f}
+.s-nav{display:flex;gap:16px;font-size:.85rem}
+.s-nav a{color:#4b4844;text-decoration:none}
+.s-main{padding:20px 24px 0}
+.s-steps{margin:0;font-size:.78rem;color:#7a766f;text-transform:uppercase;letter-spacing:.08em}
+.s-title{margin:4px 0 18px;font:600 1.6rem/1.2 Georgia,serif;color:#23211f}
+.s-cols{display:grid;grid-template-columns:1.15fr 1fr;gap:22px}
+@media (max-width:640px){.s-cols{grid-template-columns:1fr}}
+.s-form{display:flex;flex-direction:column;gap:10px;min-width:0}
+.s-label{font-size:.8rem;font-weight:600;color:#3a3733}
+.s-input{width:100%;padding:.6rem .75rem;border:1px solid #d9d6d0;border-radius:6px;background:#fff;color:#23211f}
+.s-coupon{display:flex;gap:8px}
+.s-apply{padding:.55rem .9rem;border:1px solid #d9d6d0;border-radius:6px;background:#f6f5f3;color:#23211f;cursor:pointer}
+.s-returns{margin:4px 0 0;font-size:.85rem;color:#c9c9c9}
+.s-pay{margin-top:6px;padding:.8rem 1rem;border:0;border-radius:6px;background:#e5484d;color:#fff;font-weight:600;font-size:.95rem;cursor:pointer}
+.s-terms{font-size:10px;color:#8a8680;text-decoration:none}
+.s-summary{background:#f8f7f5;border:1px solid #ecebe8;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.s-sumtitle{margin:0 0 4px;font-weight:600;color:#23211f}
+.s-row{display:flex;justify-content:space-between;gap:12px;font-size:.88rem;color:#3a3733}
+.s-total{border-top:1px solid #e3e1dd;padding-top:10px;margin-top:4px;font-size:.95rem;color:#23211f}
+.site [data-prod].hl{outline:2px dashed #ff5a36;outline-offset:3px;border-radius:3px}
+.site .flash{animation:flash 1.4s ease}
+@keyframes flash{25%{box-shadow:0 0 0 8px rgba(19,163,107,.35)}100%{box-shadow:0 0 0 0 rgba(19,163,107,0)}}
+
+/* cards / panel */
+.panel,.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;min-width:0;display:flex;flex-direction:column}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.ph h2{margin:0;font:800 1.15rem/1.1 var(--display)}
+.pb{padding:18px;display:flex;flex-direction:column;gap:16px}
+.back{background:none;border:0;padding:0;color:var(--accent);font-weight:600;cursor:pointer}
+.guide{background:var(--accent-soft);border-radius:10px;padding:14px 16px;font-size:.9rem}
+.guide ol{margin:6px 0 0;padding-left:1.2rem;display:flex;flex-direction:column;gap:2px}
+.guide p{margin:8px 0 0;color:var(--muted);font-size:.84rem}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer}
+.item:hover{border-color:var(--muted)}
+.num{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--pin);display:grid;place-items:center;flex:none}
+.num span{transform:rotate(45deg);color:#fff;font:700 .7rem var(--mono)}
+.num.fixed{background:var(--ok)}
+.item-t{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-m{display:block;font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font:600 .68rem/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:.38rem .55rem;border-radius:99px;white-space:nowrap;background:var(--sunk);color:var(--muted)}
+.pill.open{background:var(--warn-soft);color:var(--warn)}
+.pill.sent{background:var(--accent-soft);color:var(--accent)}
+.pill.fixed{background:var(--ok-soft);color:var(--ok)}
+.empty{color:var(--muted);font-size:.9rem;padding:14px;border:1px dashed var(--line);border-radius:10px;text-align:center}
+
+label.lbl{font-weight:600;font-size:.9rem}
+textarea{width:100%;padding:.7rem .8rem;border:1px solid var(--line);border-radius:9px;background:var(--surface);resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 .72rem var(--mono);padding:.28rem .5rem;border:1px solid var(--line);border-radius:6px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.chip.ok{color:var(--ok)}
+.chip.p1{color:var(--pin);border-color:color-mix(in srgb,var(--pin) 40%,var(--line))}
+.sugg{font-size:.82rem;padding:.35rem .65rem;border:1px dashed var(--line);border-radius:99px;background:none;cursor:pointer;color:var(--muted)}
+.sugg:hover{color:var(--ink);border-color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fine{font:.75rem var(--mono);color:var(--muted)}
+.sel{display:block;padding:.55rem .7rem;border-radius:8px;background:var(--sunk);overflow-x:auto;white-space:nowrap}
+
+.ttl{margin:0;font:800 1.35rem/1.15 var(--display);text-wrap:balance}
+.meta{font-size:.8rem;color:var(--muted);margin-top:4px}
+.thread{display:flex;flex-direction:column;gap:10px}
+.msg{max-width:88%;padding:10px 13px;border-radius:12px;font-size:.92rem;display:flex;flex-direction:column;gap:6px}
+.msg .who{font:600 .66rem var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.msg.me{align-self:flex-end;background:var(--accent-soft);border-bottom-right-radius:4px}
+.msg.agent{align-self:flex-start;background:var(--sunk);border-bottom-left-radius:4px}
+.opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.opt{padding:.4rem .7rem;border-radius:99px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);cursor:pointer;font-size:.85rem;font-weight:500}
+.opt:hover{background:var(--accent);color:var(--accent-ink)}
+.ansrow{display:flex;gap:6px}
+.ansrow input{flex:1;min-width:0;padding:.45rem .65rem;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.typing{flex-direction:row;align-items:center;gap:10px;color:var(--muted)}
+.dots{display:inline-flex;gap:3px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bl 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bl{50%{opacity:.25}}
+
+.brief{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.brief-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;background:var(--sunk);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brief-h b{font:600 .7rem var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.brief dl{margin:0;padding:14px;display:grid;grid-template-columns:7.5rem minmax(0,1fr);gap:10px 14px;font-size:.9rem}
+.brief dt{font:600 .72rem var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-top:2px}
+.brief dd{margin:0;min-width:0}
+.brief ul{margin:0;padding-left:1.1rem}
+@media (max-width:480px){.brief dl{grid-template-columns:1fr;gap:2px}.brief dd{margin-bottom:8px}}
+details.ctx{border:1px solid var(--line);border-radius:12px}
+details.ctx summary{padding:10px 14px;cursor:pointer;font-weight:600;font-size:.9rem}
+.ctx-body{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px;font-size:.84rem}
+.kv{display:grid;grid-template-columns:7.5rem minmax(0,1fr);gap:6px 12px;font-size:.86rem}
+.kv>span:nth-child(odd){color:var(--muted);font:600 .7rem var(--mono);text-transform:uppercase;letter-spacing:.05em;padding-top:3px}
+.kv>span:nth-child(even){overflow-wrap:anywhere;min-width:0}
+pre.code{margin:0;padding:10px 12px;border-radius:8px;background:var(--sunk);font:.76rem/1.6 var(--mono);overflow-x:auto;white-space:pre}
+
+.routes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.routes{grid-template-columns:1fr}}
+.route{display:flex;flex-direction:column;gap:3px;text-align:left;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;min-width:0}
+.route:hover:not(:disabled){border-color:var(--accent)}
+.route b{font-size:.9rem}
+.route small{color:var(--muted);font-size:.78rem;line-height:1.35}
+.route:disabled{opacity:.55;cursor:not-allowed}
+.term{margin:0;background:var(--term);color:var(--term-fg);border-radius:10px;padding:12px 14px;font:.76rem/1.75 var(--mono);overflow:auto;white-space:pre;max-height:420px;min-height:120px}
+.term .p{color:#8ea2ff}.term .dim{color:#6b7283}.term .add{color:#3ccf8e}.term .del{color:#ff8a7a}.term .ok{color:#3ccf8e;font-weight:600}.term .j{color:#e6c07b}
+.banner{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--ok-soft);color:var(--ok);font-weight:600;font-size:.9rem;flex-wrap:wrap}
+.status-line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.88rem;flex-wrap:wrap}
+.linkbtn{background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer;padding:0}
+
+/* MCP view */
+.toolrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.toolrow:first-child{border-top:0;padding-top:0}
+.toolrow small{color:var(--muted);grid-column:1}
+.qrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.conn{display:inline-flex;align-items:center;gap:.4rem;font:600 .75rem var(--mono);color:var(--ok)}
+.conn b{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+
+/* Tickets view */
+.tk-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:820px){.board{grid-template-columns:1fr}}
+.col{background:var(--sunk);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0;min-height:120px}
+.col-h{display:flex;justify-content:space-between;font:600 .72rem var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:4px 4px 2px}
+.tcard{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;text-align:left;cursor:pointer;width:100%}
+.tcard:hover{border-color:var(--muted)}
+.tcard[aria-current="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tkey{font:600 .72rem var(--mono);color:var(--muted)}
+.tcard .t{font-weight:600;font-size:.9rem;line-height:1.35}
+.tcard .f{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
+.tdetail{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:0}
+.tdetail>div{padding:18px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.tdetail>div+div{border-left:1px solid var(--line);background:var(--sunk)}
+@media (max-width:820px){.tdetail{grid-template-columns:1fr}.tdetail>div+div{border-left:0;border-top:1px solid var(--line)}}
+.tdetail h4{margin:0;font:600 .72rem var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.tdetail p{margin:0}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
+.check input{margin-top:4px}
+.shot{border:1px solid var(--line);border-radius:8px;background:#fff;padding:14px;position:relative;color:#23211f;font:13px/1.4 "IBM Plex Sans",system-ui,sans-serif;overflow:hidden}
+.shot .bar{font:.65rem var(--mono);color:#8a8680;margin-bottom:10px}
+.shot .el{display:inline-block;padding:6px 10px;border:2px dashed #ff5a36;border-radius:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shot .mini{position:absolute;right:12px;top:30px;width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#ff5a36;display:grid;place-items:center}
+.shot .mini span{transform:rotate(45deg);color:#fff;font:700 .6rem var(--mono)}
+
+/* PR view */
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.steps li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;font-size:.88rem;align-items:start}
+.steps li i{width:16px;height:16px;border-radius:50%;margin-top:3px;background:var(--ok);display:grid;place-items:center;font-style:normal;color:var(--surface);font-size:.6rem;font-weight:700}
+.steps li.run i{background:none;border:2px solid var(--accent);border-top-color:transparent;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.steps small{display:block;color:var(--muted);font:.74rem var(--mono);overflow-wrap:anywhere}
+.prhead{display:flex;flex-direction:column;gap:6px}
+.prhead h3{margin:0;font:700 1.15rem/1.3 var(--body)}
+.prstate{display:inline-flex;align-items:center;gap:.35rem;font:600 .75rem var(--body);padding:.3rem .7rem;border-radius:99px;background:var(--sunk);color:var(--muted)}
+.prstate.merged{background:#8250df;color:#fff}
+.checks{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.checks div{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;font-size:.86rem;border-top:1px solid var(--line)}
+.checks div:first-child{border-top:0}
+.checks b{color:var(--ok);font-weight:600}
+.files{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.files .fh{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--sunk);font:.76rem var(--mono);flex-wrap:wrap}
+.files .term{border-radius:0;max-height:none}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:.7rem 1rem;border-radius:10px;font-size:.88rem;max-width:min(92vw,460px);z-index:20;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body style="margin:0">
+<div class="shell">
+  <header class="top">
+    <div class="brand"><span class="logo"><i></i>Prod</span><span class="tag">Early prototype</span></div>
+    <div class="top-r">
+      <span class="agent-chip" id="agentChip"><b></b><span>Agent: scripted demo</span></span>
+      <button class="btn sm" id="resetBtn" type="button">Reset demo</button>
+    </div>
+  </header>
+
+  <div class="intro">
+    <h1>Report it once. Fix it your way.</h1>
+    <p>Every prod turns into a brief written for whoever acts next. Pull it into your AI coding tool, file it as a ticket, or let the agent draft the pull request.</p>
+  </div>
+
+  <nav class="tabs" aria-label="Prototype views">
+    <a class="tab" href="#capture" data-tab="capture">Pin an issue <span class="cnt" id="cnt-capture"></span></a>
+    <a class="tab" href="#mcp" data-tab="mcp">Via MCP <span class="cnt" id="cnt-mcp"></span></a>
+    <a class="tab" href="#tickets" data-tab="tickets">Tickets <span class="cnt" id="cnt-tickets"></span></a>
+    <a class="tab" href="#prs" data-tab="prs">Pull request · beta <span class="cnt" id="cnt-prs"></span></a>
+  </nav>
+
+  <main class="app view" id="v-capture">
+    <section class="browser" aria-label="Demo shop with the Prod extension">
+      <div class="chrome"><span class="d"></span><span class="d"></span><span class="d"></span><span class="url">https://kettle.example/checkout</span></div>
+      <div class="ext">
+        <span class="logo"><i></i>Prod</span>
+        <button class="btn sm pinbtn" id="pinBtn" type="button" aria-pressed="false">Pin an issue</button>
+        <span class="ext-hint" id="extHint">Click Pin, then click anything on the page that looks wrong.</span>
+        <span class="ext-count" id="extCount"></span>
+      </div>
+      <div class="site-wrap" id="siteWrap">
+        <div class="site" id="site">
+          <div class="s-head">
+            <span class="s-logo" data-prod="logo">Kettle &amp; Co.</span>
+            <nav class="s-nav"><a href="#" data-prod="nav-shop">Shop</a><a href="#" data-prod="nav-journal">Journal</a><a href="#" data-prod="nav-cart">Cart (2)</a></nav>
+          </div>
+          <div class="s-main">
+            <p class="s-steps" data-prod="steps">Step 3 of 3 · Payment</p>
+            <h3 class="s-title" data-prod="title">Checkout</h3>
+            <div class="s-cols">
+              <form class="s-form" id="shopForm">
+                <label class="s-label" for="cardno" data-prod="cardlabel">Card number</label>
+                <input class="s-input" id="cardno" data-prod="card" value="•••• •••• •••• 4242" readonly>
+                <label class="s-label" for="coupon" data-prod="couponlabel">Discount</label>
+                <div class="s-coupon"><input class="s-input" id="coupon" data-prod="coupon" placeholder="Code"><button class="s-apply" type="button" data-prod="apply">Apply</button></div>
+                <p class="s-returns" data-prod="returns">Free returns within 30 days</p>
+                <button class="s-pay" type="button" data-prod="pay">Submit</button>
+                <a class="s-terms" href="#" data-prod="terms">By paying you agree to our terms of sale</a>
+              </form>
+              <div class="s-summary">
+                <p class="s-sumtitle" data-prod="sumtitle">Your order</p>
+                <div class="s-row" data-prod="item1"><span>Stoneware kettle</span><span>₹3,200</span></div>
+                <div class="s-row" data-prod="item2"><span>Pour-over set</span><span>₹1,450</span></div>
+                <div class="s-row"><span data-prod="shipping">Shiping</span><span>₹0</span></div>
+                <div class="s-total" data-prod="total"><span>Total</span> <span>₹4,650</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pins" id="pins"></div>
+      </div>
+    </section>
+    <aside class="panel" id="panel" aria-live="polite"><div id="panelBody"></div></aside>
+  </main>
+
+  <section class="view" id="v-mcp" hidden></section>
+  <section class="view" id="v-tickets" hidden></section>
+  <section class="view" id="v-prs" hidden></section>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const KEY = 'prod-proto-v2';
+const site = $('#site'), siteWrap = $('#siteWrap'), pinLayer = $('#pins'), body = $('#panelBody');
+const ALLOWED_CSS = ['color','background','background-color','font-size','font-weight','padding','text-align','border','border-color','border-radius','opacity','min-height','letter-spacing','text-decoration','text-transform','line-height','display','justify-content','gap','width','max-width'];
+const KINDS = ['Bug','UX','Copy','Visual','Accessibility'];
+const PERMANENT = ['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','session_expired'];
+const TABS = ['capture','mcp','tickets','prs'];
+const MCP_URL = 'https://mcp.prod.example/kettle';
+
+/* ---------- telemetry the extension would capture ---------- */
+const CONSOLE = {
+  total: ["TypeError: Cannot read properties of undefined (reading 'tax') · cart.js:88"],
+  coupon: ["Unhandled promise rejection: CouponError 500 · coupon.ts:41"],
+  apply: ["Unhandled promise rejection: CouponError 500 · coupon.ts:41"]
+};
+const NETWORK = { coupon: ["POST /api/coupon → 500 (312 ms)"], apply: ["POST /api/coupon → 500 (312 ms)"] };
+
+/* ---------- scripted agent (used when Claude isn't available) ---------- */
+const SCRIPT = {
+  pay: {
+    hint: ["“Submit” doesn't say this takes payment", "The red looks like an error"],
+    q: { question: "What should this button make clear to the shopper?", options: ["That it takes payment", "The amount they'll pay", "Just fix the colour"] },
+    brief: { title: "Pay button reads like an error", kind: "UX", priority: "P1", effort: "XS",
+      wrong: "The final checkout button is red and says “Submit”. Shoppers read red as a warning, and the label doesn't say it takes payment.",
+      expected: "A calm, positive button that names the action and the amount.",
+      change: "Change the label to “Pay ₹4,650” and the background to #1F7A4D.",
+      acceptance: ["Label reads “Pay ₹4,650”", "Background is #1F7A4D with white text (contrast 4.5:1 or better)", "Hover and disabled states match the new colour"],
+      file: "src/components/checkout/PayButton.tsx",
+      patch: { text: "Pay ₹4,650", placeholder: null, css: { "background-color": "#1f7a4d" } } }
+  },
+  returns: {
+    hint: ["I can barely read this"],
+    q: { question: "Who has trouble reading it?", options: ["Everyone, it's too faint", "Phone users outdoors", "Low-vision shoppers"] },
+    brief: { title: "Returns note fails colour contrast", kind: "Accessibility", priority: "P2", effort: "XS",
+      wrong: "“Free returns within 30 days” is light grey (#C9C9C9) on white, about 1.7:1 contrast. The reassurance is easy to miss.",
+      expected: "The note meets WCAG AA (4.5:1) and reads as a benefit.",
+      change: "Set color to #3F6B4F and font-weight to 500.",
+      acceptance: ["Contrast ratio is 4.5:1 or better", "Text stays on one line at 375px width"],
+      file: "src/components/checkout/TrustNotes.tsx",
+      patch: { text: null, placeholder: null, css: { color: "#3f6b4f", "font-weight": "500" } } }
+  },
+  coupon: {
+    hint: ["Applied a code and nothing happened"],
+    q: { question: "What happened when you pressed Apply?", options: ["Nothing at all", "The page froze", "I wasn't sure what to type"] },
+    brief: { title: "Coupon fails silently with a vague field", kind: "Bug", priority: "P2", effort: "S",
+      wrong: "The field only says “Code”. Applying one sends POST /api/coupon, which returns 500, and the shopper sees nothing.",
+      expected: "A clear prompt in the field and an inline error when a code can't be applied.",
+      change: "Set the placeholder to “Gift card or promo code” and show an inline error when /api/coupon fails.",
+      acceptance: ["Placeholder reads “Gift card or promo code”", "A 500 from /api/coupon shows “We couldn't apply that code” under the field", "No unhandled promise rejection in the console"],
+      file: "src/components/checkout/CouponField.tsx",
+      patch: { text: null, placeholder: "Gift card or promo code", css: { "border-color": "#9a958d" } } }
+  },
+  apply: { alias: "coupon" },
+  shipping: {
+    hint: ["Typo: Shiping"],
+    q: { question: "Is it only the spelling?", options: ["Yes, just the typo", "Also say it's free", "Add the delivery time"] },
+    brief: { title: "Typo in the shipping row", kind: "Copy", priority: "P3", effort: "XS",
+      wrong: "The order summary says “Shiping”.", expected: "The row reads “Shipping”.",
+      change: "Change the label text from “Shiping” to “Shipping”.",
+      acceptance: ["Row label reads “Shipping”", "Same string fixed in the order confirmation email"],
+      file: "src/components/checkout/OrderSummary.tsx",
+      patch: { text: "Shipping", placeholder: null, css: {} } }
+  },
+  total: {
+    hint: ["Total isn't lined up with the prices"],
+    q: { question: "What looks off about the total?", options: ["It isn't right-aligned", "It should stand out more", "The number looks wrong"] },
+    brief: { title: "Order total misaligned with line items", kind: "Visual", priority: "P3", effort: "XS",
+      wrong: "Every line item puts its price on the right, but the Total row sits on the left. The console also logs a TypeError reading 'tax' in cart.js:88.",
+      expected: "The total lines up with the prices above it and reads as the final amount.",
+      change: "Make the total row display:flex with justify-content:space-between and font-weight 700.",
+      acceptance: ["₹4,650 aligns with the prices above", "Total is bold", "No TypeError in cart.js on load"],
+      file: "src/components/checkout/OrderSummary.tsx",
+      patch: { text: null, placeholder: null, css: { display: "flex", "justify-content": "space-between", "font-weight": "700" } } }
+  },
+  terms: {
+    hint: ["Too tiny to read or tap"],
+    q: { question: "Where is this a problem?", options: ["Hard to tap on phones", "Too small to read", "Doesn't look like a link"] },
+    brief: { title: "Terms link too small to read or tap", kind: "Accessibility", priority: "P3", effort: "XS",
+      wrong: "The terms link is 10px grey text with no underline, so it's hard to read and to tap.",
+      expected: "Readable text with a tap area of at least 24px.",
+      change: "Set font-size to 13px, add an underline, and make it inline-block with 6px vertical padding.",
+      acceptance: ["Font size is 13px", "Link is underlined", "Tap target is 24px tall or more"],
+      file: "src/components/checkout/PayButton.tsx",
+      patch: { text: null, placeholder: null, css: { "font-size": "13px", "text-decoration": "underline", display: "inline-block", padding: "6px 0" } } }
+  }
+};
+function script(id) { const s = SCRIPT[id]; return s && s.alias ? SCRIPT[s.alias] : s; }
+const copyBrief = id => { const s = script(id); return JSON.parse(JSON.stringify(s.brief)); };
+
+/* ---------- state ---------- */
+const ORIG = {};
+site.querySelectorAll('[data-prod]').forEach(el => { ORIG[el.dataset.prod] = { text: el.children.length ? null : el.textContent, ph: el.getAttribute('placeholder') }; });
+
+function seed() {
+  const ex = (id, n, el, ox, oy, mins, comment, answer) => ({ id, n, el, ox, oy, author: 'Riya (example)', example: true, created: Date.now() - mins * 60e3,
+    comment, question: script(el).q, answer, brief: copyBrief(el), status: 'open', route: null, context: null, old: null });
+  return { next: 104, n: 4, tool: 'Claude Code', tracker: 'Jira', mcpLog: [], prods: [
+    ex('PRD-101', 1, 'pay', .72, .35, 40, "“Submit” doesn't say this goes to payment, and the red reads like an error.", 'That it takes payment'),
+    ex('PRD-102', 2, 'shipping', .6, .3, 25, 'Typo in the summary: “Shiping”.', 'Yes, just the typo'),
+    ex('PRD-103', 3, 'total', .85, .4, 12, "The total isn't lined up with the prices above it.", "It isn't right-aligned")
+  ] };
+}
+function load() {
+  try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && Array.isArray(v.prods)) return v; } catch (e) {}
+  return seed();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+let state = load();
+let tab = 'capture';
+let view = { name: 'inbox', id: null };
+let ui = { ticket: null, pr: null };
+let draft = null, pinMode = false, busy = false;
+
+/* ---------- agent availability ---------- */
+let sample = null;
+const sampleReady = (window.claude && typeof window.claude.use === 'function')
+  ? window.claude.use('sample').then(s => { sample = s || null; renderAgentChip(); return s; }).catch(() => null)
+  : Promise.resolve(null);
+function renderAgentChip() {
+  const c = $('#agentChip');
+  c.classList.toggle('live', !!sample);
+  c.querySelector('span').textContent = sample ? 'Agent: Claude' : 'Agent: scripted demo';
+  c.title = sample ? 'Claude writes the follow-up questions and briefs live.' : "Claude isn't available here, so a scripted agent answers. It handles the planted issues on the demo shop.";
+}
+function sampleFailed(e) {
+  if (e && PERMANENT.includes(e.code)) { sample = null; renderAgentChip(); toast("Claude isn't available here, so the scripted agent took over."); }
+  else if (!e || e.code !== 'cancelled') toast('The agent hit a snag, so the scripted answer was used.');
+}
+
+/* ---------- capture ---------- */
+function hex(v) { return String(v).replace(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/g, (m, r, g, b, a) => (a !== undefined && +a === 0) ? 'transparent' : '#' + [r, g, b].map(x => (+x).toString(16).padStart(2, '0')).join('')); }
+function cssPath(el) {
+  const parts = []; let n = el;
+  while (n && n !== site) { const c = [...n.classList].filter(x => x !== 'hl' && x !== 'flash')[0]; parts.unshift(n.tagName.toLowerCase() + (c ? '.' + c : '')); n = n.parentElement; }
+  return 'main.checkout > ' + parts.join(' > ');
+}
+function deviceStr() {
+  const ua = navigator.userAgent;
+  const b = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const os = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'macOS' : /Win/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : 'Unknown OS';
+  return `${b} · ${os} · ${innerWidth}×${innerHeight}`;
+}
+function capture(el) {
+  el.classList.remove('hl');
+  const cs = getComputedStyle(el), styles = {};
+  ['color', 'background-color', 'font-size', 'font-weight', 'padding', 'text-align', 'border-radius', 'display'].forEach(k => styles[k] = hex(cs.getPropertyValue(k)));
+  const id = el.dataset.prod;
+  return { selector: cssPath(el), html: el.outerHTML.replace(/\s+/g, ' ').replace(/ class="([^"]*?)\s*\bhl\b"/, ' class="$1"').slice(0, 200),
+    text: el.textContent.trim().slice(0, 120), styles, console: CONSOLE[id] || [], network: NETWORK[id] || [],
+    device: deviceStr(), framework: 'Next.js 14 · React 18', url: 'https://kettle.example/checkout',
+    leaf: el.children.length === 0, isInput: el.tagName === 'INPUT' };
+}
+const elOf = id => site.querySelector(`[data-prod="${id}"]`);
+const byId = id => state.prods.find(p => p.id === id);
+
+/* ---------- patches ---------- */
+function cleanPatch(p, ctx) {
+  const out = { text: null, placeholder: null, css: {} };
+  if (!p || typeof p !== 'object') return out;
+  if (typeof p.text === 'string' && p.text.trim() && p.text.length <= 90 && (!ctx || ctx.leaf)) out.text = p.text.trim();
+  if (typeof p.placeholder === 'string' && p.placeholder.trim() && p.placeholder.length <= 60 && (!ctx || ctx.isInput)) out.placeholder = p.placeholder.trim();
+  if (p.css && typeof p.css === 'object') for (const [k, v] of Object.entries(p.css)) {
+    const key = k.replace(/[A-Z]/g, m => '-' + m.toLowerCase()).trim();
+    if (ALLOWED_CSS.includes(key) && (typeof v === 'string' || typeof v === 'number')) {
+      const s = String(v).trim(); if (s && s.length <= 60 && !/url\(|expression|javascript|[;{}<>]/i.test(s)) out.css[key] = s;
+    }
+  }
+  return out;
+}
+function recordOld(p) {
+  const el = elOf(p.el); if (!el || !p.brief) return;
+  const cs = getComputedStyle(el), pt = p.brief.patch;
+  p.old = { text: el.children.length ? null : el.textContent, ph: el.getAttribute('placeholder'), css: {} };
+  Object.keys(pt.css).forEach(k => p.old.css[k] = hex(cs.getPropertyValue(k)).trim() || '(unset)');
+}
+function applyPatch(p, flash) {
+  const el = elOf(p.el); if (!el || !p.brief) return;
+  const pt = p.brief.patch;
+  if (pt.text && el.children.length === 0) el.textContent = pt.text;
+  if (pt.placeholder && el.tagName === 'INPUT') el.setAttribute('placeholder', pt.placeholder);
+  Object.entries(pt.css).forEach(([k, v]) => el.style.setProperty(k, v));
+  if (flash) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500); }
+}
+function restoreSite() {
+  site.querySelectorAll('[data-prod]').forEach(el => {
+    const o = ORIG[el.dataset.prod]; el.removeAttribute('style');
+    if (o.text !== null) el.textContent = o.text;
+    if (o.ph !== null) el.setAttribute('placeholder', o.ph);
+  });
+}
+function diffRows(p) {
+  const pt = p.brief.patch, o = p.old || { css: {} }, rows = [];
+  if (pt.text) rows.push(['del', `-  ${JSON.stringify(o.text ?? '')}`], ['add', `+  ${JSON.stringify(pt.text)}`]);
+  if (pt.placeholder) rows.push(['del', `-  placeholder="${o.ph ?? ''}"`], ['add', `+  placeholder="${pt.placeholder}"`]);
+  Object.entries(pt.css).forEach(([k, v]) => rows.push(['del', `-  ${k}: ${o.css[k] ?? '(unset)'};`], ['add', `+  ${k}: ${v};`]));
+  return rows;
+}
+const lineHtml = ([cls, s]) => `<span class="${cls}">${esc(s)}</span>\n`;
+
+/* ---------- prompts ---------- */
+function ctxBlock(p) {
+  const c = p.context;
+  return `Page: ${c.url} (checkout page of a small kitchenware shop, prices in INR)
+Element selector: ${c.selector}
+Element HTML: ${c.html}
+Visible text: "${c.text}"
+Computed styles: ${JSON.stringify(c.styles)}
+Console errors (last 60s): ${c.console.join('; ') || 'none'}
+Failed network requests: ${c.network.join('; ') || 'none'}
+Device: ${c.device}
+Reporter's comment: "${p.comment}"`;
+}
+function qPrompt(p) {
+  return `You are Prod's triage agent. Someone flagged an issue on a live web page. Ask ONE short clarifying question whose answer would most change the fix, plus 3 short answer options (max 6 words each). Don't ask about things the captured context already shows.
+
+${ctxBlock(p)}
+
+Reply with only JSON: {"question":"...","options":["...","...","..."]}`;
+}
+function bPrompt(p) {
+  const c = p.context;
+  return `You are Prod's triage agent. Turn this flagged issue into a developer-ready brief.
+
+${ctxBlock(p)}
+Agent asked: "${p.question.question}"
+Reporter answered: "${p.answer}"
+
+The fix will be applied as a patch to this one element only:
+- "text": new visible text, or null. ${c.leaf ? 'Allowed.' : 'Must be null (the element has child elements).'}
+- "placeholder": new placeholder, or null. ${c.isInput ? 'Allowed.' : 'Must be null.'}
+- "css": CSS declarations using only these properties: ${ALLOWED_CSS.join(', ')}. Use concrete values (hex colours, px). Use {} if no CSS change.
+Keep the patch minimal and make it match the reporter's answer. Write plainly and briefly.
+
+Reply with only JSON in this shape:
+{"title":"issue title, max 8 words","kind":"Bug|UX|Copy|Visual|Accessibility","priority":"P1|P2|P3","effort":"XS|S|M","wrong":"1-2 sentences","expected":"1 sentence","change":"1 sentence naming the exact change","acceptance":["2-4 testable checks"],"file":"likely source file in a Next.js app","patch":{"text":null,"placeholder":null,"css":{}}}`;
+}
+function validBrief(b, ctx) {
+  if (!b || typeof b !== 'object' || typeof b.title !== 'string' || !b.title.trim()) throw { code: 'invalid_json' };
+  const s = (v, n) => String(v ?? '').slice(0, n), pick = (v, l, d) => l.includes(v) ? v : d;
+  return { title: s(b.title, 80), kind: pick(b.kind, KINDS, 'UX'), priority: pick(b.priority, ['P1', 'P2', 'P3'], 'P2'), effort: pick(b.effort, ['XS', 'S', 'M', 'L'], 'S'),
+    wrong: s(b.wrong, 400), expected: s(b.expected, 300), change: s(b.change, 300),
+    acceptance: (Array.isArray(b.acceptance) ? b.acceptance : []).slice(0, 5).map(x => s(x, 160)).filter(Boolean),
+    file: s(b.file || 'src/app/checkout/page.tsx', 100), patch: cleanPatch(b.patch, ctx) };
+}
+const genericQ = () => ({ question: "What should happen instead?", options: ["Make it clearer", "Fix how it looks", "It doesn't work"] });
+function genericBrief(p) {
+  return { title: p.comment.length > 60 ? p.comment.slice(0, 57) + '…' : p.comment, kind: 'UX', priority: 'P3', effort: 'S',
+    wrong: p.comment, expected: `Reporter wants: ${p.answer}.`, change: 'Needs a design decision. The scripted agent has no automatic change for this element.',
+    acceptance: ['Reviewed with the reporter', 'Change verified on desktop and phone'], file: 'src/app/checkout/page.tsx',
+    patch: { text: null, placeholder: null, css: {} } };
+}
+
+/* ---------- agent flow ---------- */
+async function askQuestion(p) {
+  p.busy = 'Reading the element and console…'; render();
+  await sampleReady;
+  let q = null;
+  if (sample) {
+    try {
+      const r = await sample.json(qPrompt(p), { modelTier: 'quick' });
+      if (!r || typeof r.question !== 'string' || !Array.isArray(r.options)) throw { code: 'invalid_json' };
+      q = { question: r.question.slice(0, 200), options: r.options.map(String).filter(Boolean).slice(0, 3).map(x => x.slice(0, 48)) };
+    } catch (e) { sampleFailed(e); }
+  } else await wait(reduce ? 0 : 700);
+  p.question = q || (script(p.el)?.q) || genericQ();
+  p.busy = null; render();
+  const a = $('#ans'); if (a && matchMedia('(hover:hover)').matches) a.focus();
+}
+async function answer(p, text) {
+  text = String(text || '').trim(); if (!text || p.answer) return;
+  p.answer = text; p.busy = 'Writing the brief…'; render();
+  let b = null;
+  if (sample) {
+    try { b = validBrief(await sample.json(bPrompt(p), { modelTier: 'quick' }), p.context); }
+    catch (e) { sampleFailed(e); }
+  } else await wait(reduce ? 0 : 900);
+  if (!b) { b = script(p.el) ? copyBrief(p.el) : genericBrief(p); b.patch = cleanPatch(b.patch, p.context); }
+  p.brief = b; p.status = 'open'; p.busy = null;
+  recordOld(p); render();
+}
+function submitDraft() {
+  const t = $('#cmt'); const comment = t.value.trim();
+  if (!comment) { t.focus(); toast('Add a sentence about what looks wrong.'); return; }
+  const p = { id: 'PRD-' + state.next++, n: state.n++, el: draft.el, ox: draft.ox, oy: draft.oy, author: 'You', created: Date.now(),
+    comment, context: draft.context, question: null, answer: null, brief: null, status: 'asking', route: null, old: null };
+  state.prods.push(p); draft = null;
+  go('detail', p.id); askQuestion(p);
+}
+
+/* ---------- shared fix ---------- */
+const ready = () => state.prods.filter(p => p.brief && p.status !== 'fixed');
+function fix(p, via) {
+  applyPatch(p, true); p.status = 'fixed'; p.fixedAt = Date.now(); p.fixedVia = via;
+  if (p.ticket) p.ticket.col = 'done';
+  if (p.pr) p.pr.stage = 'merged';
+}
+const viaText = p => p.fixedVia === 'mcp' ? `by ${p.fixedTool || 'your coding tool'} over MCP` : p.fixedVia === 'pr' ? `by merging PR #${p.pr?.num}` : p.fixedVia === 'ticket' ? `from ticket ${p.ticket?.key}` : '';
+
+/* ---------- Via MCP ---------- */
+const TOOLS = {
+  'Claude Code': { cmd: `claude mcp add --transport http prod ${MCP_URL}`, lang: 'terminal', prompt: t => `$ claude "${t}"` },
+  'Cursor': { cmd: `// .cursor/mcp.json\n{\n  "mcpServers": {\n    "prod": { "url": "${MCP_URL}" }\n  }\n}`, lang: 'json', prompt: t => `cursor agent › ${t}` },
+  'Codex': { cmd: `# ~/.codex/config.toml\n[mcp_servers.prod]\nurl = "${MCP_URL}"`, lang: 'toml', prompt: t => `$ codex "${t}"` }
+};
+function listJson() { return JSON.stringify(ready().map(p => ({ id: p.id, title: p.brief.title, priority: p.brief.priority, selector: p.context.selector })), null, 2); }
+function getJson(p) {
+  return JSON.stringify({ id: p.id, title: p.brief.title, priority: p.brief.priority,
+    brief: { wrong: p.brief.wrong, expected: p.brief.expected, change: p.brief.change, acceptance: p.brief.acceptance },
+    element: { selector: p.context.selector, html: p.context.html.slice(0, 90) + '…' }, likely_file: p.brief.file,
+    console: p.context.console, device: p.context.device }, null, 2);
+}
+function termPush(lines) {
+  state.mcpLog.push(...lines);
+  const t = document.getElementById('mterm');
+  if (t) { t.insertAdjacentHTML('beforeend', lines.map(lineHtml).join('')); t.scrollTop = t.scrollHeight; }
+}
+async function mcpTry(name) {
+  if (busy) return;
+  const first = ready()[0];
+  if (name === 'list_prods') termPush([['p', '→ list_prods({ site: "kettle.example", status: "open" })'], ...listJson().split('\n').map(l => ['j', '  ' + l])]);
+  else if (name === 'get_prod') {
+    if (!first) { termPush([['dim', '  no open prods. Pin one first.']]); return; }
+    termPush([['p', `→ get_prod("${first.id}")`], ...getJson(first).split('\n').map(l => ['j', '  ' + l])]);
+  }
+  save();
+}
+async function runMcp(ids) {
+  if (busy) return;
+  const list = ids.map(byId).filter(p => p && p.brief && p.status !== 'fixed');
+  if (!list.length) { toast('Nothing open for your coding tool to fix.'); return; }
+  busy = true; renderTab();
+  const tool = TOOLS[state.tool], step = async l => { await wait(reduce ? 0 : 220); termPush([l]); };
+  await step(['p', tool.prompt(list.length > 1 ? 'fix the open prods for kettle.example' : `fix ${list[0].id}`)]);
+  await step(['dim', '  connecting to prod mcp… connected']);
+  await step(['p', '→ list_prods({ site: "kettle.example", status: "open" })']);
+  await step(['dim', `  ${ready().length} open · working on ${list.map(p => p.id).join(', ')}`]);
+  for (const p of list) {
+    await step(['p', `→ get_prod("${p.id}")`]);
+    await step(['dim', `  ${p.brief.title} · ${p.brief.priority}`]);
+    await step(['dim', `  change: ${p.brief.change}`]);
+    await step(['dim', `// editing ${p.brief.file}`]);
+    const rows = diffRows(p);
+    for (const r of rows) await step(r);
+    if (!rows.length) await step(['dim', '  no code change suggested; resolving with a note']);
+    await step(['p', `→ resolve_prod("${p.id}", { note: "Fixed in ${p.brief.file}" })`]);
+    p.fixedTool = state.tool; fix(p, 'mcp');
+    await step(['ok', `✓ ${p.id} fixed`]);
+    renderCounts(); renderMcpQueue();
+  }
+  await step(['dim', `done · ${list.length} prod${list.length > 1 ? 's' : ''} resolved. Open "Pin an issue" to see the changes on the shop.`]);
+  busy = false; render();
+  toast(`${list.length} fixed by ${state.tool}. The shop page is updated.`);
+}
+function mcpQueueHtml() {
+  const ps = state.prods.filter(p => p.brief).sort((a, b) => (a.status === 'fixed') - (b.status === 'fixed') || a.brief.priority.localeCompare(b.brief.priority));
+  if (!ps.length) return `<p class="empty">No briefs yet. Pin an issue and answer the agent first.</p>`;
+  return ps.map(p => `<div class="qrow"><span class="num ${p.status === 'fixed' ? 'fixed' : ''}"><span>${p.status === 'fixed' ? '✓' : p.n}</span></span>
+    <span style="min-width:0"><span class="item-t">${esc(p.brief.title)}</span><span class="item-m">${p.id} · ${p.brief.priority} · ${esc(p.brief.file)}</span></span>
+    ${p.status === 'fixed' ? `<span class="pill fixed">Fixed</span>` : `<button class="btn sm" data-act="mcp-one" data-id="${p.id}" ${busy ? 'disabled' : ''}>Fix this</button>`}</div>`).join('');
+}
+function renderMcpQueue() { const q = $('#mqueue'); if (q) q.innerHTML = mcpQueueHtml(); }
+function renderMcp() {
+  const t = TOOLS[state.tool], open = ready().length;
+  return `<div class="vhead"><span class="eyebrow">Via MCP</span><h2>Your AI coding tool does the fix</h2>
+    <p>Prod runs as an MCP server. Claude Code, Cursor or Codex fetch the open issues with full context and edit the right file. Nobody retypes a screenshot.</p></div>
+  <div class="cols">
+    <section class="card"><div class="ph"><h2>Connect once</h2><span class="conn"><b></b>Connected</span></div>
+      <div class="pb">
+        <div class="seg" role="group" aria-label="Coding tool">${Object.keys(TOOLS).map(k => `<button data-act="tool" data-v="${k}" aria-pressed="${state.tool === k}">${k}</button>`).join('')}</div>
+        <div class="row" style="justify-content:space-between"><span class="fine">${state.tool === 'Claude Code' ? 'Run in your project folder' : 'Add to your config'}</span><button class="btn sm" data-act="copy-cfg">Copy</button></div>
+        <pre class="code" id="cfg">${esc(t.cmd)}</pre>
+        <h3 class="sub">Tools your coding tool gets</h3>
+        <div>
+          <div class="toolrow"><code>list_prods(site, status)</code><button class="btn sm" data-act="try" data-v="list_prods" ${busy ? 'disabled' : ''}>Try</button><small>Open prods for a site, sorted by priority.</small></div>
+          <div class="toolrow"><code>get_prod(id)</code><button class="btn sm" data-act="try" data-v="get_prod" ${busy ? 'disabled' : ''}>Try</button><small>The brief plus selector, HTML, styles, console errors and device.</small></div>
+          <div class="toolrow"><code>resolve_prod(id, note)</code><span class="fine">after edit</span><small>Marks the prod fixed and tells the reporter.</small></div>
+        </div>
+      </div></section>
+    <section class="card"><div class="ph"><h2>${esc(state.tool)}</h2><span class="row"><button class="btn sm primary" data-act="mcp-all" ${busy || !open ? 'disabled' : ''}>Fix all open (${open})</button><button class="btn sm" data-act="mcp-clear" ${busy ? 'disabled' : ''}>Clear</button></span></div>
+      <div class="pb">
+        <pre class="term" id="mterm">${state.mcpLog.length ? state.mcpLog.map(lineHtml).join('') : '<span class="dim">Ask your coding tool to fix the open prods, or try a tool on the left.</span>\n'}</pre>
+        <div><h3 class="sub">Open prods</h3><div id="mqueue">${mcpQueueHtml()}</div></div>
+      </div></section>
+  </div>`;
+}
+
+/* ---------- Tickets ---------- */
+const COLS = { Jira: [['todo', 'To do'], ['doing', 'In progress'], ['done', 'Done']], Linear: [['todo', 'Backlog'], ['doing', 'In progress'], ['done', 'Done']] };
+const POINTS = { XS: 1, S: 2, M: 3, L: 5 };
+const PRI = { Jira: { P1: 'Highest', P2: 'High', P3: 'Medium' }, Linear: { P1: 'Urgent', P2: 'High', P3: 'Medium' } };
+function fileTicket(p) {
+  if (p.ticket || !p.brief || p.status === 'fixed') return;
+  p.ticket = { key: 'KET-' + (10 + p.n), col: 'todo', checks: p.brief.acceptance.map(() => false) };
+  p.route = 'ticket'; p.status = 'sent';
+}
+function ticketMd(p) {
+  const b = p.brief, c = p.context;
+  return `${p.ticket.key} · ${b.title}
+
+What's wrong
+${b.wrong}
+
+Expected
+${b.expected}
+
+Exact change
+${b.change} (${b.file})
+
+Acceptance criteria
+${b.acceptance.map(a => '- [ ] ' + a).join('\n')}
+
+Context from Prod ${p.id}
+Console: ${c.console.join('; ') || 'no errors'}
+Network: ${c.network.join('; ') || 'no failed requests'}
+Device: ${c.device}`;
+}
+function renderTickets() {
+  const tr = state.tracker, untriaged = ready().filter(p => !p.ticket), withT = state.prods.filter(p => p.ticket);
+  const sel = ui.ticket && byId(ui.ticket) && byId(ui.ticket).ticket ? byId(ui.ticket) : null;
+  const card = p => `<button class="tcard" data-act="tk-open" data-id="${p.id}" aria-current="${sel === p}">
+      <span class="tkey">${p.ticket.key}</span><span class="t">${esc(p.brief.title)}</span>
+      <span class="f"><span class="chips"><span class="chip ${p.brief.priority === 'P1' ? 'p1' : ''}">${PRI[tr][p.brief.priority]}</span><span class="chip">${p.brief.kind}</span></span><span class="fine">${POINTS[p.brief.effort]} pt</span></span></button>`;
+  return `<div class="vhead"><span class="eyebrow">Tickets</span><h2>Tickets developers actually like</h2>
+    <p>One click files a Jira or Linear issue with the brief, acceptance criteria, screenshot, console errors and a suggested priority already filled in.</p></div>
+  <div class="tk-top"><div class="seg" role="group" aria-label="Tracker">${['Jira', 'Linear'].map(k => `<button data-act="tracker" data-v="${k}" aria-pressed="${tr === k}">${k}</button>`).join('')}</div>
+    <span class="fine">Project: Kettle web (KET) · prototype, nothing leaves the page</span></div>
+  <section class="card"><div class="ph"><h2>Ready to file</h2>${untriaged.length > 1 ? `<button class="btn sm primary" data-act="tk-all">File all ${untriaged.length}</button>` : ''}</div>
+    <div class="pb" style="gap:0">${untriaged.length ? untriaged.map(p => `<div class="qrow"><span class="num"><span>${p.n}</span></span>
+      <span style="min-width:0"><span class="item-t">${esc(p.brief.title)}</span><span class="item-m">${p.id} · ${p.brief.kind} · suggested ${PRI[tr][p.brief.priority]}</span></span>
+      <button class="btn sm" data-act="tk-file" data-id="${p.id}">File in ${tr}</button></div>`).join('') : `<p class="empty">Every open prod already has a ticket or is fixed.</p>`}</div></section>
+  <div class="board">${COLS[tr].map(([k, label]) => { const ps = withT.filter(p => p.ticket.col === k); return `<div class="col"><div class="col-h"><span>${label}</span><span>${ps.length}</span></div>${ps.map(card).join('') || '<span class="fine" style="padding:6px">Empty</span>'}</div>`; }).join('')}</div>
+  ${sel ? ticketDetail(sel) : ''}`;
+}
+function ticketDetail(p) {
+  const tr = state.tracker, b = p.brief, c = p.context, t = p.ticket, colName = Object.fromEntries(COLS[tr])[t.col];
+  return `<section class="card" id="tkDetail"><div class="ph"><span class="row"><span class="tkey">${tr} · ${t.key}</span><span class="pill ${t.col === 'done' ? 'fixed' : t.col === 'doing' ? 'sent' : 'open'}">${colName}</span></span>
+    <span class="row">${t.col === 'todo' ? `<button class="btn sm" data-act="tk-move" data-id="${p.id}" data-v="doing">Start progress</button>` : ''}${t.col !== 'done' ? `<button class="btn sm primary" data-act="tk-move" data-id="${p.id}" data-v="done">Mark done</button>` : ''}<button class="btn sm" data-act="tk-copy">Copy</button></span></div>
+    <div class="tdetail"><div>
+      <h3 class="ttl" style="font-size:1.2rem">${esc(b.title)}</h3>
+      <div><h4>What's wrong</h4><p>${esc(b.wrong)}</p></div>
+      <div><h4>Expected</h4><p>${esc(b.expected)}</p></div>
+      <div><h4>Exact change</h4><p>${esc(b.change)}</p><p class="fine" style="margin-top:4px">${esc(b.file)}</p></div>
+      <div><h4>Acceptance criteria</h4>${b.acceptance.map((a, i) => `<label class="check"><input type="checkbox" id="ac-${p.id}-${i}" data-act="tk-check" data-id="${p.id}" data-v="${i}" ${t.checks[i] ? 'checked' : ''}><span>${esc(a)}</span></label>`).join('')}</div>
+      <div><h4>Console</h4><pre class="code">${esc(c.console.join('\n') || 'No errors in the 60 s before the pin')}${c.network.length ? '\n' + esc(c.network.join('\n')) : ''}</pre></div>
+      <pre class="code" id="tkText" hidden>${esc(ticketMd(p))}</pre>
+    </div><div>
+      <div class="kv"><span>Status</span><span>${colName}</span><span>Priority</span><span>${PRI[tr][b.priority]} (suggested)</span><span>${tr === 'Jira' ? 'Story points' : 'Estimate'}</span><span>${POINTS[b.effort]}</span>
+        <span>Labels</span><span class="chips"><span class="chip">${b.kind}</span><span class="chip">checkout</span><span class="chip">from-prod</span></span>
+        <span>Reporter</span><span>${esc(p.author)}</span><span>Source</span><span><button class="linkbtn" data-act="to-prod" data-id="${p.id}">${p.id}</button></span>
+        <span>Device</span><span>${esc(c.device)}</span></div>
+      <div><h4>Screenshot</h4><div class="shot" style="margin-top:6px"><div class="bar">kettle.example/checkout</div><span class="el">${esc(c.text || c.selector)}</span><span class="mini"><span>${p.n}</span></span></div></div>
+      ${p.status === 'fixed' ? `<div class="banner">✓ Fixed ${viaText(p)}</div>` : ''}
+    </div></div></section>`;
+}
+
+/* ---------- Pull requests ---------- */
+async function startPr(p) {
+  if (busy || p.pr || !p.brief || p.status === 'fixed') return;
+  busy = true; p.route = 'pr'; p.status = 'sent';
+  p.pr = { num: 46 + p.n, stage: 'drafting', steps: [], branch: `fix/${p.id.toLowerCase()}-` + p.brief.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28) };
+  ui.pr = p.id; render();
+  const rows = diffRows(p), n = rows.length / 2;
+  const steps = [
+    ['Read the brief and captured context', `${p.id} · ${p.context.selector}`],
+    ['Indexed kettle-web', '412 files · Next.js 14'],
+    ['Found the code for this element', `${p.brief.file}:${18 + p.n * 3}`],
+    ['Wrote the patch', `+${n} −${n} in 1 file`],
+    ['Impact check', `${p.brief.file.split('/').pop().replace('.tsx', '')} is used on /checkout only · 1 page affected`],
+    ['Policy check', 'No new dependencies, no secrets, no config changes'],
+    [`Opened draft PR #${p.pr.num}`, p.pr.branch]
+  ];
+  for (const s of steps) { p.pr.steps.push({ t: s[0], d: s[1], run: true }); render(); await wait(reduce ? 0 : 520); p.pr.steps[p.pr.steps.length - 1].run = false; }
+  p.pr.stage = 'draft'; busy = false; render();
+}
+function renderPrs() {
+  const queue = ready().filter(p => !p.pr), prs = state.prods.filter(p => p.pr).sort((a, b) => b.pr.num - a.pr.num);
+  const sel = ui.pr && byId(ui.pr) && byId(ui.pr).pr ? byId(ui.pr) : prs[0];
+  return `<div class="vhead"><span class="eyebrow">Pull request · beta</span><h2>Let the agent draft the PR</h2>
+    <p>For fixes you approve, the agent finds the change in your repo, writes the patch and opens a draft GitHub PR with an impact check. You review and merge.</p></div>
+  <div class="cols">
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <section class="card"><div class="ph"><h2>Approve fixes</h2><span class="fine">repo: kettle/kettle-web</span></div>
+        <div class="pb" style="gap:0">${queue.length ? queue.map(p => `<div class="qrow"><span class="num"><span>${p.n}</span></span>
+          <span style="min-width:0"><span class="item-t">${esc(p.brief.title)}</span><span class="item-m">${esc(p.brief.change)}</span></span>
+          <button class="btn sm primary" data-act="pr-start" data-id="${p.id}" ${busy ? 'disabled' : ''}>Approve</button></div>`).join('') : `<p class="empty">No approved-but-unstarted fixes. Pin an issue to add one.</p>`}</div></section>
+      <section class="card"><div class="ph"><h2>Pull requests</h2><span class="fine">${prs.length}</span></div>
+        <div class="pb" style="gap:8px">${prs.length ? prs.map(p => `<button class="item" data-act="pr-open" data-id="${p.id}" style="${sel === p ? 'border-color:var(--accent)' : ''}">
+          <span class="fine">#${p.pr.num}</span><span style="min-width:0"><span class="item-t">Fix: ${esc(p.brief.title)}</span><span class="item-m">${esc(p.pr.branch)}</span></span>
+          <span class="pill ${p.pr.stage === 'merged' ? 'fixed' : 'sent'}">${p.pr.stage === 'drafting' ? 'Drafting' : p.pr.stage === 'merged' ? 'Merged' : 'Draft'}</span></button>`).join('') : `<p class="empty">No pull requests yet.</p>`}</div></section>
+    </div>
+    ${sel ? prDetail(sel) : `<section class="card"><div class="pb"><p class="empty">Approve a fix and the agent's work shows up here.</p></div></section>`}
+  </div>`;
+}
+function prDetail(p) {
+  const pr = p.pr, rows = diffRows(p), n = rows.length / 2, drafting = pr.stage === 'drafting';
+  return `<section class="card"><div class="pb">
+    <div class="prhead"><h3>Fix: ${esc(p.brief.title)} <span class="muted">#${pr.num}</span></h3>
+      <span class="row"><span class="prstate ${pr.stage === 'merged' ? 'merged' : ''}">${drafting ? 'Agent working' : pr.stage === 'merged' ? 'Merged' : 'Draft'}</span><span class="fine">prod-agent wants to merge 1 commit into main from ${esc(pr.branch)}</span></span></div>
+    <div><h3 class="sub" style="margin-bottom:8px">Agent run</h3><ul class="steps">${pr.steps.map(s => `<li class="${s.run ? 'run' : ''}"><i>${s.run ? '' : '✓'}</i><span>${esc(s.t)}<small>${esc(s.d)}</small></span></li>`).join('')}</ul></div>
+    ${drafting ? '' : `
+    <div class="brief"><div class="brief-h"><b>Description</b><span class="fine">from ${p.id}</span></div>
+      <dl><dt>Problem</dt><dd>${esc(p.brief.wrong)}</dd><dt>Change</dt><dd>${esc(p.brief.change)}</dd><dt>Test plan</dt><dd><ul>${p.brief.acceptance.map(a => `<li>${esc(a)}</li>`).join('')}</ul></dd></dl></div>
+    <div class="files"><div class="fh"><span>${esc(p.brief.file)}</span><span>+${n} −${n}</span></div><pre class="term">${rows.length ? rows.map(lineHtml).join('') : '<span class="dim">No code change suggested for this element.</span>\n'}</pre></div>
+    <div class="checks"><div><span>Impact check · 1 page affected (/checkout)</span><b>Passed</b></div><div><span>Policy · no deps, secrets or config</span><b>Passed</b></div><div><span>Build and unit tests</span><b>Passed</b></div></div>
+    ${pr.stage === 'merged' ? `<div class="banner">✓ Merged. The fix is live on the shop page.</div>` : `<div class="row"><button class="btn primary" data-act="pr-merge" data-id="${p.id}">Review done · Merge</button><span class="fine">Prototype: no real repo is touched.</span></div>`}`}
+  </div></section>`;
+}
+
+/* ---------- capture panel ---------- */
+const ago = t => { const m = Math.round((Date.now() - t) / 60e3); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
+function pill(p) {
+  if (p.busy && p.answer && !p.brief) return `<span class="pill">Writing brief</span>`;
+  if (p.status === 'asking') return `<span class="pill">Agent asking</span>`;
+  if (p.status === 'fixed') return `<span class="pill fixed">Fixed</span>`;
+  if (p.status === 'sent') return `<span class="pill sent">${p.route === 'pr' ? 'PR draft' : 'Ticket filed'}</span>`;
+  return `<span class="pill open">Open</span>`;
+}
+function renderInbox() {
+  const ps = [...state.prods].sort((a, b) => b.created - a.created);
+  const open = ps.filter(p => p.status !== 'fixed').length, fixed = ps.length - open;
+  return `<div class="ph"><h2>Inbox</h2><span class="muted">${open} open · ${fixed} fixed</span></div>
+  <div class="pb">
+    <div class="guide"><b>Try the loop</b><ol><li>Press <b>Pin an issue</b> above the shop.</li><li>Click anything that looks wrong and say why.</li><li>Answer the agent's question. It writes the brief.</li><li>Fix it via MCP, a ticket or a pull request using the tabs above.</li></ol>
+    <p>Still unpinned on the shop: faint text, a vague coupon field, a tiny link.</p></div>
+    ${ps.length ? `<ul class="list">${ps.map(p => `<li><button class="item" data-act="open" data-id="${p.id}">
+      <span class="num ${p.status === 'fixed' ? 'fixed' : ''}"><span>${p.status === 'fixed' ? '✓' : p.n}</span></span>
+      <span style="min-width:0"><span class="item-t">${esc(p.brief ? p.brief.title : p.comment)}</span>
+      <span class="item-m">${p.id} · ${p.brief ? p.brief.kind + ' · ' + p.brief.priority + ' · ' : ''}${esc(p.author)} · ${ago(p.created)}</span></span>
+      ${pill(p)}</button></li>`).join('')}</ul>` : `<p class="empty">No prods yet. Pin something on the shop to start.</p>`}
+  </div>`;
+}
+function renderCompose() {
+  const c = draft.context, s = script(draft.el), hints = s ? s.hint : ['This looks off', 'This is confusing'];
+  return `<div class="ph"><button class="back" data-act="cancel">← Inbox</button><h2>New prod</h2></div>
+  <div class="pb">
+    <div><span class="fine">Pinned element</span><code class="sel">${esc(c.selector)}</code></div>
+    <div class="chips"><span class="chip ok">Screenshot ✓</span><span class="chip ok">Element ✓</span><span class="chip ${c.console.length ? '' : 'ok'}">Console ${c.console.length ? '· ' + c.console.length + ' error' : '✓'}</span><span class="chip ok">Device ✓</span>${c.network.length ? '<span class="chip">Network · 1 failed</span>' : ''}</div>
+    <label class="lbl" for="cmt">What's wrong?</label>
+    <textarea id="cmt" rows="3" placeholder="Say it the way you'd say it to a teammate"></textarea>
+    <div class="chips">${hints.map(h => `<button class="sugg" data-act="sugg">${esc(h)}</button>`).join('')}</div>
+    <div class="row"><button class="btn primary" data-act="submit">Send to agent</button><button class="btn" data-act="cancel">Cancel</button><span class="fine">Ctrl/⌘ + Enter</span></div>
+  </div>`;
+}
+function renderDetail(p) {
+  const b = p.brief, c = p.context;
+  let t = `<div class="msg me"><span class="who">${esc(p.author)}</span>${esc(p.comment)}</div>`;
+  if (p.question) t += `<div class="msg agent"><span class="who">Prod agent</span>${esc(p.question.question)}${!p.answer ? `<div class="opts">${p.question.options.map(o => `<button class="opt" data-act="opt" data-id="${p.id}">${esc(o)}</button>`).join('')}</div><div class="ansrow"><input id="ans" placeholder="Or type your answer" aria-label="Your answer"><button class="btn sm" data-act="ans" data-id="${p.id}">Send</button></div>` : ''}</div>`;
+  if (p.answer) t += `<div class="msg me">${esc(p.answer)}</div>`;
+  if (p.busy) t += `<div class="msg agent typing"><span class="dots"><i></i><i></i><i></i></span>${esc(p.busy)}</div>`;
+  const briefHtml = b ? `<article class="brief">
+    <div class="brief-h"><b>Developer brief</b><span class="chips"><span class="chip">${b.kind}</span><span class="chip">${b.priority}</span><span class="chip">Effort ${b.effort}</span></span></div>
+    <dl><dt>What's wrong</dt><dd>${esc(b.wrong)}</dd><dt>Expected</dt><dd>${esc(b.expected)}</dd><dt>Exact change</dt><dd>${esc(b.change)}</dd>
+    <dt>Acceptance</dt><dd><ul>${b.acceptance.map(a => `<li>${esc(a)}</li>`).join('')}</ul></dd><dt>Likely file</dt><dd><code>${esc(b.file)}</code></dd></dl></article>` : '';
+  const ctxHtml = `<details class="ctx"><summary>Captured context</summary><div class="ctx-body">
+    <div class="kv"><span>Selector</span><span><code>${esc(c.selector)}</code></span><span>Page</span><span>${esc(c.url)}</span>
+    <span>Console</span><span>${esc(c.console.join('; ') || 'No errors in the last 60s')}</span><span>Network</span><span>${esc(c.network.join('; ') || 'No failed requests')}</span>
+    <span>Device</span><span>${esc(c.device)}</span><span>Framework</span><span>${esc(c.framework)}</span></div>
+    <pre class="code">${esc(c.html)}</pre>
+    <pre class="code">${esc(Object.entries(c.styles).map(([k, v]) => k + ': ' + v + ';').join('\n'))}</pre></div></details>`;
+  let send = '';
+  if (b) {
+    const status = p.status === 'fixed' ? `<div class="banner">✓ Fixed ${viaText(p)} · ${ago(p.fixedAt || Date.now())}</div>`
+      : p.ticket ? `<div class="status-line"><span>Ticket <b>${p.ticket.key}</b> filed in ${state.tracker}</span><button class="linkbtn" data-act="goto-ticket" data-id="${p.id}">Open ticket →</button></div>`
+      : p.pr ? `<div class="status-line"><span>Draft PR <b>#${p.pr.num}</b></span><button class="linkbtn" data-act="goto-pr" data-id="${p.id}">Open PR →</button></div>` : '';
+    const dis = p.status === 'fixed' || busy ? 'disabled' : '';
+    send = `<div style="display:flex;flex-direction:column;gap:10px"><h3 class="sub">${p.status === 'fixed' ? 'Resolved' : 'Fix it your way'}</h3>${status}
+      ${p.status === 'fixed' ? '' : `<div class="routes">
+        <button class="route" data-act="send-mcp" data-id="${p.id}" ${dis}><b>Via MCP</b><small>${esc(state.tool)} pulls it and edits the file</small></button>
+        <button class="route" data-act="send-ticket" data-id="${p.id}" ${dis || (p.ticket ? 'disabled' : '')}><b>Ticket</b><small>File in Jira or Linear, brief attached</small></button>
+        <button class="route" data-act="send-pr" data-id="${p.id}" ${dis || (p.pr ? 'disabled' : '')}><b>Pull request</b><small>Agent drafts the patch · beta</small></button></div>`}</div>`;
+  }
+  return `<div class="ph"><button class="back" data-act="back">← Inbox</button><span class="row"><span class="mono muted">${p.id}</span>${pill(p)}</span></div>
+  <div class="pb">
+    <div><h2 class="ttl">${esc(b ? b.title : 'New prod')}</h2><div class="meta">Pin #${p.n} · ${esc(p.author)} · ${ago(p.created)}${p.example ? ' · example data' : ''}</div></div>
+    <div class="thread">${t}</div>${briefHtml}${send}${ctxHtml}
+  </div>`;
+}
+function renderPins() {
+  if (tab !== 'capture') return;
+  const wr = siteWrap.getBoundingClientRect();
+  const list = state.prods.map(p => ({ ...p }));
+  if (view.name === 'compose' && draft) list.push({ id: 'new', el: draft.el, ox: draft.ox, oy: draft.oy, status: 'draft' });
+  pinLayer.innerHTML = '';
+  list.forEach(p => {
+    const el = elOf(p.el); if (!el) return;
+    const r = el.getBoundingClientRect(), b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pin' + (p.status === 'fixed' ? ' fixed' : '') + (p.status === 'draft' ? ' draft' : '') + (view.id === p.id ? ' active' : '');
+    b.style.left = (r.left - wr.left + r.width * p.ox) + 'px';
+    b.style.top = (r.top - wr.top + r.height * p.oy) + 'px';
+    b.innerHTML = `<span>${p.status === 'fixed' ? '✓' : p.status === 'draft' ? '+' : p.n}</span>`;
+    b.setAttribute('aria-label', p.id === 'new' ? 'New pin' : `Open ${p.id}`);
+    if (p.id !== 'new') b.onclick = () => go('detail', p.id);
+    pinLayer.appendChild(b);
+  });
+}
+
+/* ---------- render ---------- */
+function renderCounts() {
+  const open = state.prods.filter(p => p.status !== 'fixed').length;
+  $('#extCount').textContent = `${open} open`;
+  $('#cnt-capture').textContent = open || '';
+  $('#cnt-mcp').textContent = ready().length || '';
+  $('#cnt-tickets').textContent = state.prods.filter(p => p.ticket && p.ticket.col !== 'done').length || '';
+  $('#cnt-prs').textContent = state.prods.filter(p => p.pr && p.pr.stage !== 'merged').length || '';
+}
+function renderTab() {
+  if (tab === 'mcp') { const y = $('#mterm')?.scrollTop; $('#v-mcp').innerHTML = renderMcp(); const t = $('#mterm'); if (t) t.scrollTop = t.scrollHeight; }
+  else if (tab === 'tickets') $('#v-tickets').innerHTML = renderTickets();
+  else if (tab === 'prs') $('#v-prs').innerHTML = renderPrs();
+}
+function render() {
+  if (view.name === 'compose' && draft) body.innerHTML = renderCompose();
+  else if (view.name === 'detail' && byId(view.id)) body.innerHTML = renderDetail(byId(view.id));
+  else { view = { name: 'inbox', id: null }; body.innerHTML = renderInbox(); }
+  renderTab(); renderCounts(); renderPins(); save();
+}
+function setTab(t, push = true) {
+  if (!TABS.includes(t)) t = 'capture';
+  tab = t;
+  TABS.forEach(x => { $('#v-' + x).hidden = x !== t; });
+  document.querySelectorAll('.tab').forEach(a => a.setAttribute('aria-current', a.dataset.tab === t ? 'page' : 'false'));
+  if (push && location.hash !== '#' + t) { try { history.replaceState(null, '', '#' + t); } catch (e) { location.hash = t; } }
+  if (t !== 'capture') setPinMode(false);
+  render();
+}
+function go(name, id = null) {
+  const prev = view.name + view.id; view = { name, id };
+  if (tab !== 'capture') setTab('capture'); else render();
+  if (prev !== name + id && matchMedia('(max-width: 960px)').matches && name !== 'inbox') $('#panel').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  if (name === 'compose') { const t = $('#cmt'); if (t && matchMedia('(hover:hover)').matches) t.focus(); }
+}
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+function copyFrom(pre, label) {
+  const sel = () => { pre.hidden = false; const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected. Press Ctrl/⌘ + C to copy.'); };
+  try { navigator.clipboard.writeText(pre.textContent).then(() => toast(label + ' copied.'), sel); } catch (err) { sel(); }
+}
+
+/* ---------- pin mode ---------- */
+function setPinMode(on) {
+  pinMode = on; $('#pinBtn').setAttribute('aria-pressed', on); $('#pinBtn').textContent = on ? 'Cancel pin' : 'Pin an issue';
+  siteWrap.classList.toggle('pinning', on);
+  $('#extHint').textContent = on ? 'Hover to highlight, then click the part that looks wrong. Esc to cancel.' : 'Click Pin, then click anything on the page that looks wrong.';
+  if (!on) site.querySelectorAll('.hl').forEach(x => x.classList.remove('hl'));
+}
+$('#pinBtn').onclick = () => setPinMode(!pinMode);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && pinMode) setPinMode(false); });
+site.addEventListener('mouseover', e => {
+  if (!pinMode) return;
+  const t = e.target.closest('[data-prod]');
+  site.querySelectorAll('.hl').forEach(x => x !== t && x.classList.remove('hl'));
+  if (t) t.classList.add('hl');
+});
+site.addEventListener('mouseleave', () => site.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')));
+site.addEventListener('mousedown', e => { if (pinMode) e.preventDefault(); });
+site.addEventListener('click', e => {
+  if (!pinMode) {
+    if (e.target.closest('a,button')) { e.preventDefault(); toast('This is a demo shop. Press Pin an issue to flag something.'); }
+    return;
+  }
+  e.preventDefault(); e.stopPropagation();
+  const t = e.target.closest('[data-prod]');
+  if (!t) { toast('Click one of the highlighted parts of the page.'); return; }
+  const r = t.getBoundingClientRect(), cl = v => Math.min(.95, Math.max(.05, v));
+  draft = { el: t.dataset.prod, ox: cl((e.clientX - r.left) / r.width), oy: cl((e.clientY - r.top) / r.height), context: capture(t) };
+  setPinMode(false); go('compose');
+}, true);
+$('#shopForm').addEventListener('submit', e => e.preventDefault());
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b || site.contains(b)) return;
+  const act = b.dataset.act, p = b.dataset.id ? byId(b.dataset.id) : null, v = b.dataset.v;
+  switch (act) {
+    case 'back': go('inbox'); break;
+    case 'open': case 'to-prod': go('detail', b.dataset.id); break;
+    case 'cancel': draft = null; go('inbox'); break;
+    case 'sugg': { const t = $('#cmt'); t.value = b.textContent; t.focus(); break; }
+    case 'submit': submitDraft(); break;
+    case 'opt': if (p) answer(p, b.textContent); break;
+    case 'ans': if (p) answer(p, $('#ans').value); break;
+    case 'send-mcp': if (p) { setTab('mcp'); runMcp([p.id]); } break;
+    case 'send-ticket': if (p) { fileTicket(p); ui.ticket = p.id; setTab('tickets'); toast(`${p.ticket.key} filed in ${state.tracker}.`); } break;
+    case 'send-pr': if (p) { setTab('prs'); startPr(p); } break;
+    case 'goto-ticket': ui.ticket = b.dataset.id; setTab('tickets'); break;
+    case 'goto-pr': ui.pr = b.dataset.id; setTab('prs'); break;
+    case 'tool': state.tool = v; render(); break;
+    case 'copy-cfg': copyFrom($('#cfg'), 'Config'); break;
+    case 'try': mcpTry(v); break;
+    case 'mcp-all': runMcp(ready().map(x => x.id)); break;
+    case 'mcp-one': if (p) runMcp([p.id]); break;
+    case 'mcp-clear': state.mcpLog = []; render(); break;
+    case 'tracker': state.tracker = v; render(); break;
+    case 'tk-file': if (p) { fileTicket(p); ui.ticket = p.id; render(); toast(`${p.ticket.key} filed in ${state.tracker}.`); } break;
+    case 'tk-all': { const ps = ready().filter(x => !x.ticket); ps.forEach(fileTicket); ui.ticket = ps[0]?.id; render(); toast(`${ps.length} tickets filed in ${state.tracker}.`); break; }
+    case 'tk-open': ui.ticket = b.dataset.id; render(); $('#tkDetail')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' }); break;
+    case 'tk-move': if (p) { if (v === 'done') { fix(p, 'ticket'); toast(`${p.ticket.key} done. The fix is live on the shop page.`); } else p.ticket.col = v; render(); } break;
+    case 'tk-copy': copyFrom($('#tkText'), 'Ticket'); break;
+    case 'pr-start': if (p) startPr(p); break;
+    case 'pr-open': ui.pr = b.dataset.id; render(); break;
+    case 'pr-merge': if (p) { fix(p, 'pr'); render(); toast(`PR #${p.pr.num} merged. The fix is live on the shop page.`); } break;
+  }
+});
+document.addEventListener('change', e => {
+  const b = e.target; if (b.dataset?.act !== 'tk-check') return;
+  const p = byId(b.dataset.id); if (p?.ticket) { p.ticket.checks[+b.dataset.v] = b.checked; save(); }
+});
+body.addEventListener('keydown', e => {
+  if (e.target.id === 'cmt' && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submitDraft(); }
+  if (e.target.id === 'ans' && e.key === 'Enter') { e.preventDefault(); const p = byId(view.id); if (p) answer(p, e.target.value); }
+});
+$('#resetBtn').onclick = () => {
+  if (busy) return;
+  try { localStorage.removeItem(KEY); } catch (e) {}
+  restoreSite(); state = seed(); draft = null; ui = { ticket: null, pr: null }; view = { name: 'inbox', id: null };
+  setPinMode(false); boot(); render(); toast('Demo reset.');
+};
+addEventListener('hashchange', () => setTab(location.hash.slice(1), false));
+
+/* ---------- boot ---------- */
+function boot() {
+  state.prods.forEach(p => {
+    if (p.status === 'fixed') applyPatch(p, false);
+    if (!p.context) { const el = elOf(p.el); if (el) p.context = capture(el); }
+    if (p.busy) {
+      p.busy = null;
+      if (!p.question) p.question = script(p.el)?.q || genericQ();
+      if (p.answer && !p.brief) { p.brief = script(p.el) ? copyBrief(p.el) : genericBrief(p); p.status = 'open'; }
+    }
+    if (p.pr && p.pr.stage === 'drafting') { p.pr.stage = 'draft'; p.pr.steps.forEach(s => s.run = false); }
+    if (p.brief && !p.old && p.status !== 'fixed') recordOld(p);
+  });
+}
+boot(); renderAgentChip();
+setTab(location.hash.slice(1), false);
+addEventListener('resize', renderPins);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderPins);
+</script>
+</body>
+</html>
